@@ -1,0 +1,59 @@
+#!/usr/bin/perl
+use warnings;
+use strict;
+use POSIX qw( setsid );
+use Gtk;         # load the Gtk-Perl module
+init Gtk;
+set_locale Gtk;
+
+my $false = 0;
+my $true = 1;
+
+my $window;
+my $vbox;
+my $entry;
+my $button;
+
+$window = new Gtk::Window( "toplevel" );
+$window->set_usize( 200, 50 );
+$window->set_title( "Run..." );
+$window->set_position( 'center' );
+$window->signal_connect( "delete_event", sub { Gtk->exit( 0 ); } );
+
+$vbox = new Gtk::VBox( $false, 0 );
+$window->add( $vbox );
+$vbox->show();
+
+$entry = new Gtk::Entry;
+$entry->signal_connect( "activate", \&enter_callback, $entry );
+$vbox->pack_start( $entry, $true, $true, 10 );
+$entry->set_text("xterm");
+$entry->select_region( 0, length( $entry->get_text() ) );
+$entry->grab_focus();
+$entry->show();
+
+$window->show();
+
+main Gtk;
+exit( 0 );
+
+### Subroutines
+
+sub enter_callback
+{
+	my ( $widget, $entry ) = @_;
+	my $entry_text = $entry->get_text();
+
+	my $pid = fork;
+	if($pid == 0) { #child
+		open STDIN, "/dev/null" and
+		open STDOUT, ">/dev/null" and
+		open STDERR, ">/dev/null" or die "Can't daemonize\n";
+
+		setsid or die "Can't setsid\n";
+		exec($entry_text);
+	} else { #parent process or fork failed
+		Gtk->exit( 0 );
+	}
+}
+
