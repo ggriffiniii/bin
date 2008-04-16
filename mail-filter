@@ -1,0 +1,64 @@
+#!/usr/bin/perl
+use warnings;
+use strict;
+use Mail::Message;
+use Date::Parse;
+use FileHandle;
+use File::Find;
+use File::Copy;
+
+my $mailfolder = '/home/griffin/Mail';
+my $inbox = '/home/griffin/Mail/inbox/cur/';
+my $delta = 1209600; #2 weeks in seconds
+
+find(\&filter, $inbox);
+
+sub filter {
+
+	my $messagefn = $File::Find::name;
+	return 1 unless -f $messagefn;
+
+	my $messagefh = new FileHandle;
+	unless( $messagefh->open("< $messagefn") ) {
+		print STDERR "Couldn't open $messagefn\n";
+		return 2;
+	}
+
+	my $message = Mail::Message->read( $messagefh );
+	my $msgtime = str2time( $message->head->get('Date') );
+
+	if ( $msgtime && $msgtime < time() - $delta ) { #do further filtering
+
+		my $from = $message->head->get('From');
+		my $to = $message->head->get('To');
+		if($to =~ /^fw\-admin\@f5\.com$/) {
+			move_message($messagefn, "$mailfolder/fw-admin/cur/") or return 1;
+		} elsif($from =~ /lists\.f5\.com/) {
+			move_message($messagefn, "$mailfolder/lists/cur/") or return 1;
+		} elsif($from =~ /Root \(Archie\)/) {
+			move_message($messagefn, "$mailfolder/archie/cur/") or return 1;
+		} elsif($from =~ /Nagios User <nagios\@f5.com>/) {
+			move_message($messagefn, "$mailfolder/nagios/cur/") or return 1;
+		} elsif($from =~ /root \(hotdog\)/) {
+			move_message($messagefn, "$mailfolder/hotdog/cur/") or return 1;
+		} else {
+			move_message($messagefn, "$mailfolder/old/cur/") or return 1;
+		}
+
+	} else {
+		print STDERR "Message newer than delta, not filtering $messagefn\n";
+	}
+}
+
+sub move_message {
+	my $messagefn = $_[0];
+	my $dst_maildir = $_[1];
+
+	if( move($messagefn, $dst_maildir) ) {
+		print STDERR "Message $messagefn moved to $dst_maildir\n";
+		return 1;
+	} else {
+		print STDERR "Couldn't move $messagefn to $dst_maildir\n";
+		return 0;
+	}
+}
