@@ -1,0 +1,19 @@
+#!/usr/bin/perl
+use warnings;
+use strict;
+use POSIX qw( setsid );
+
+#daemonize
+chdir "/" and
+open STDIN, "/dev/null" and
+open STDOUT, ">/dev/null" and
+open STDERR, ">/dev/null" or die "Can't daemonize\n";
+
+setsid or die "Can't setsid\n";
+
+my $pid = fork();
+
+die "Fork failed\n" if ($pid < 0);
+exit(0) if ($pid); #kill parent;
+
+exec(@ARGV);
