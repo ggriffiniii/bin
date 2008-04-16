@@ -2,43 +2,18 @@
 use warnings;
 use strict;
 use IO::Socket;
-use Getopt::Long;
 
-my $host = pop @ARGV;
+(my $host, my $port) = @ARGV;
 
 die "No host specified\n" unless $host;
 
-my($port, $tcp, $icmp, $wait);
-
-GetOptions( "tcp" => \$tcp,
-	    "icmp" => \$icmp,
-	    "wait=i" => \$wait,
-	    "port=i" => \$port ) or die;
-
-if($tcp) {
-	if($icmp) {
-		print STDERR "TCP and ICMP specified.  Defaulting to ICMP\n";
-		$tcp = 0;
-	}
-	elsif ($port <= 0 || $port > 65535) {
-		die "TCP port number not specified or out of range\n";
-	}
-}
-
-if($wait) {
-	if($wait < 0) {
-		die "Wait must be a positive integer\n";
-	}
-} else {
-	$wait = 2;
-}
-
-if($tcp) {
+#do a tcp check if a port was specified else do icmp
+if($port) {
 	until( my $sock = new IO::Socket::INET (
 			PeerAddr => $host,
 			PeerPort => $port,
 			Proto => 'tcp',
-			Timeout => $wait)){next;}
+			Timeout => 2)){next;}
 
 	alertup();
 
@@ -47,12 +22,13 @@ if($tcp) {
 	#and you don't want this script to be
 
 	while(1) {
-		system("ping -c 1 -i $wait $host > /dev/null 2>&1");
+		system("ping -c 1 $host > /dev/null 2>&1");
 		if($? eq 0) {
 			alertup();
 			last;
 		} elsif ($? & 127) { #signal killed ping
-			die "Died from signal\n";
+			#die "Died from signal\n";
+			exit(1);
 		}
 	}
 }
