@@ -1,0 +1,10 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+chdir $ENV{HOME};
+if(system("mairix @ARGV > /dev/null 2>&1") == 0) {
+	exec("mutt -f $ENV{HOME}/mfolder");
+}
+
+print "No search results\n";
