@@ -9,9 +9,9 @@ open STDIN, "/dev/null" and
 open STDOUT, ">/dev/null" and
 open STDERR, ">/dev/null" or die "Can't daemonize\n";
 
-setsid or die "Can't setsid\n";
-
 my $pid = fork();
+
+setsid or die "Can't setsid\n";
 
 die "Fork failed\n" if ($pid < 0);
 exit(0) if ($pid); #kill parent;
